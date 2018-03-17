@@ -2,15 +2,18 @@ section .data
   ;defining syscall numbers
   SYS_EXIT    equ 60
   SYS_READ    equ 0
-  SYS_WRITE   equ 1
   SYS_OPEN    equ 2
   SYS_CLOSE   equ 3
   ARG_NUM     equ 2;number of arguments
   O_RDONLY    equ 0
+  BUF_SIZE    equ 1024                                        ;TODO change it later on to test it with smaller values
 
 
 section .bss
-  fd          resb 8
+  fd          resd 1
+  buffer      resb BUF_SIZE
+  numbers     resw 256
+  EOF_found   resb 1
 
 section .text
   global _start
@@ -26,7 +29,7 @@ _start:
   pop   rdi   ;get input file
   mov   rax, SYS_OPEN
   mov   rsi, O_RDONLY
-  mov   rdx, 0 ;no additional flags for sys_open
+  mov   rdx, 0   ;no additional flags for sys_open
   syscall
 
   ;check if opening input file was successful
@@ -35,9 +38,23 @@ _start:
 
   mov   [fd], rax ;store file descriptor
 
+;read from file into buffer
+_read_input:
+  mov   rax, SYS_READ
+  mov   rdi, [fd]
+  mov   rsi, buffer
+  mov   rdx, BUF_SIZE
+  syscall
 
+  ;check for EOF
+  cmp   rax, BUF_SIZE
+  je    _check_sequence
+  mov   byte [EOF_found], 1
 
-
+_check_sequence:
+  cmp   byte [EOF_found], 1
+  je    _exit_success
+  jmp   _exit_error
 
 ;program completed succesfully, given sequence is correct
 _exit_success:
