@@ -6,8 +6,7 @@ section .data
   SYS_CLOSE   equ 3
   ARG_NUM     equ 2;number of arguments
   O_RDONLY    equ 0
-  BUF_SIZE    equ 1024                                        ;TODO change it later on to test it with smaller values
-
+  BUF_SIZE    equ 1024
 
 section .bss
   fd          resd 1
@@ -36,17 +35,13 @@ _start:
   cmp   rax, 0
   jl    _exit_error
 
-  mov   [fd], rax ;store file descriptor
-  xor   r13, r13
-  xor   r15, r15
-  xor   r14, r14
-  xor   r12, r12
+  mov   [fd], rax   ;store file descriptor
 
 ;rbx - pointer to buffer
-;r15 - number from buffer
+;r12 - how many zeros were read
 ;r13 - how many numbers were read since last 0
 ;r14 - power of the first set
-;r12 - how many zeros were read
+;r15 - number from buffer
 
 ;read from file into buffer
 _read_input:
@@ -84,7 +79,7 @@ _check_sequence:
 
   ;process next number different from 0
   inc   r13   ;r13 holds how many numbers were read since last 0
-  cmp   r12, [numbers + r15 * 2]
+  cmp   r12w, word [numbers + r15 * 2]
   jne   _exit_error
 
   inc   word [numbers + r15 * 2]   ;increment count for this number
@@ -95,6 +90,7 @@ _zero_found:
   cmp   r12, 0
   jne   _process_zero
   ;this is first zero, setup needed values
+  xor   r14, r14
   mov   r14, r13   ;r14 holds power of the first set
 
 _process_zero:
@@ -110,6 +106,8 @@ _process_zero:
 _EOF_reached:
   cmp   r12, 0
   je    _exit_error   ;no zeros were read
+  cmp   r13, 0
+  jne   _exit_error   ;last number wasnt 0
   jmp   _exit_success
 
 ;program completed succesfully, given sequence is correct
