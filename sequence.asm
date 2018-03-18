@@ -7,7 +7,7 @@ section .data
   ARG_NUM     equ 2;number of arguments
   O_RDONLY    equ 0
   BUF_SIZE    equ 1024
-  CNT_LIMIT   equ 65000;number at which values will be changed to 1 (so there is no overflow)
+  CNT_LIMIT   equ 65003;number at which values will be changed to 1 (so there is no overflow)
   MAX_NUMB    equ 255
 
 section .bss
@@ -37,20 +37,21 @@ _start:
   cmp   rax, 0
   jl    _exit_error
 
-  mov   [fd], rax   ;store file descriptor
+  ;store file descriptor
+  mov   [fd], rax
 
-;rbx - pointer to buffer
+;rbx - buffer iterator
 ;r12 - how many zeros were read
 ;r13 - how many numbers were read since last 0
 ;r14 - power of the first set
 ;r15 - number from buffer
 
-;read from file into buffer
 _read_input:
   ;check if EOF was already found
   cmp   byte [EOF_found], 1
   je    _EOF_reached
 
+  ;read from file into buffer
   mov   rax, SYS_READ
   xor   rdi, rdi
   mov   rdi, [fd]
@@ -58,19 +59,20 @@ _read_input:
   mov   rdx, BUF_SIZE
   syscall
 
-  ;clear rbx which we will use as a pointer to buffer
+  ;clear rbx which we will use as a buffer iterator
   xor   rbx, rbx
 
   ;check for EOF
   cmp   rax, BUF_SIZE
   je    _check_sequence
-  mov   byte [EOF_found], 1
 
+  ;EOF found
+  mov   byte [EOF_found], 1
   cmp   rax, 0
   je    _EOF_reached
 
 _check_sequence:
-  ;check if buffer is empty
+  ;check if end of buffer was reached
   cmp   rbx, rax   ;rax still holds number of bytes read from sys_read
   jnb   _read_input
 
@@ -109,15 +111,18 @@ _process_zero:
   jne   _check_sequence
 
   mov   r12, 1
-  mov   r11, 1   ;r11 will be used as iterator in following loop
+  mov   r11, 0   ;r11 will be used as iterator in following loop
 
 _overflow_fix_loop:
+  add   r11, 1
   cmp   r11, MAX_NUMB
   ja    _check_sequence
 
-  mov   word [numbers + r11 * 2], 1   ;change count to 1
+  ;check if count for this number should be changed
+  cmp   word [numbers + r11 * 2], 0
+  je    _overflow_fix_loop
 
-  add   r11, 1
+  mov   word [numbers + r11 * 2], 1   ;change count to 1
   jmp   _overflow_fix_loop
 
 _EOF_reached:
