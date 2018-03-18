@@ -7,6 +7,8 @@ section .data
   ARG_NUM     equ 2;number of arguments
   O_RDONLY    equ 0
   BUF_SIZE    equ 1024
+  CNT_LIMIT   equ 65000;number at which values will be changed to 1 (so there is no overflow)
+  MAX_NUMB    equ 255
 
 section .bss
   fd          resd 1
@@ -101,9 +103,22 @@ _process_zero:
 
   xor   r13, r13   ;set numbers read since last 0 to zero
   inc   r12   ;increment number of zeros that were read
-                                                                                                      ;TODO write overflow fix
   
-  jmp   _check_sequence
+  ;prevent overflow
+  cmp   r12, CNT_LIMIT
+  jne   _check_sequence
+
+  mov   r12, 1
+  mov   r11, 1   ;r11 will be used as iterator in following loop
+
+_overflow_fix_loop:
+  cmp   r11, MAX_NUMB
+  ja    _check_sequence
+
+  mov   word [numbers + r11 * 2], 1   ;change count to 1
+
+  add   r11, 1
+  jmp   _overflow_fix_loop
 
 _EOF_reached:
   cmp   r12, 0
