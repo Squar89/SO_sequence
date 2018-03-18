@@ -50,6 +50,7 @@ _read_input:
   je    _EOF_reached
 
   mov   rax, SYS_READ
+  xor   rdi, rdi
   mov   rdi, [fd]
   mov   rsi, buffer
   mov   rdx, BUF_SIZE
@@ -80,7 +81,7 @@ _check_sequence:
   ;process next number different from 0
   inc   r13   ;r13 holds how many numbers were read since last 0
   cmp   r12w, word [numbers + r15 * 2]
-  jne   _exit_error
+  jne   _close_on_error
 
   inc   word [numbers + r15 * 2]   ;increment count for this number
   jmp   _check_sequence
@@ -89,13 +90,14 @@ _check_sequence:
 _zero_found:
   cmp   r12, 0
   jne   _process_zero
+  
   ;this is first zero, setup needed values
   xor   r14, r14
   mov   r14, r13   ;r14 holds power of the first set
 
 _process_zero:
   cmp   r14, r13
-  jne   _exit_error   ;power of current permutation differs from the power of original set
+  jne   _close_on_error   ;power of current permutation differs from the power of original set
 
   xor   r13, r13   ;set numbers read since last 0 to zero
   inc   r12   ;increment number of zeros that were read
@@ -105,10 +107,28 @@ _process_zero:
 
 _EOF_reached:
   cmp   r12, 0
-  je    _exit_error   ;no zeros were read
+  je    _close_on_error   ;no zeros were read
   cmp   r13, 0
-  jne   _exit_error   ;last number wasnt 0
+  jne   _close_on_error   ;last number wasnt 0
+  jmp   _close_on_success
+
+;close opened file then exit with success
+_close_on_success:
+  xor   rdi, rdi
+  mov   rax, SYS_CLOSE
+  mov   rdi, [fd]
+  syscall
+
   jmp   _exit_success
+
+;close opened file then exit with error
+_close_on_error:
+  xor   rdi, rdi
+  mov   rax, SYS_CLOSE
+  mov   rdi, [fd]
+  syscall
+
+  jmp   _exit_error
 
 ;program completed succesfully, given sequence is correct
 _exit_success:
