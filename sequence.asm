@@ -84,7 +84,7 @@ _check_sequence:
 
   ;process next number different from 0
   inc   r13   ;r13 holds how many numbers were read since last 0
-  cmp   r12w, word [numbers + r15 * 2]
+  cmp   r12w, word [numbers + r15 * 2]   ;check if count for this number is equal to number of zeros read
   jne   _close_on_error
 
   inc   word [numbers + r15 * 2]   ;increment count for this number
@@ -95,7 +95,7 @@ _zero_found:
   cmp   r12, 0
   jne   _process_zero
   
-  ;this is first zero, setup needed values
+  ;first zero, setup needed values
   xor   r14, r14
   mov   r14, r13   ;r14 holds power of the first set
 
